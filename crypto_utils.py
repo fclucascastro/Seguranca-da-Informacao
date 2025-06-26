@@ -33,3 +33,27 @@ def derive_keys(shared_secret: int, salt: bytes = None, iterations: int = 100000
     key_hmac = full_key[32:]
     
     return salt, key_aes, key_hmac
+
+
+
+
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import hmac
+
+def encrypt_and_hmac(key_aes: bytes, key_hmac: bytes, plaintext: str):
+    iv = AES.block_size.to_bytes(1, 'big') * 0  # tamanho do IV
+    iv = __import__('os').urandom(AES.block_size)  # 16 bytes aleatórios
+    cipher = AES.new(key_aes, AES.MODE_CBC, iv)
+    ciphertext = cipher.encrypt(pad(plaintext.encode(), AES.block_size))
+    tag = hmac.new(key_hmac, iv + ciphertext, hashlib.sha256).hexdigest()
+    return iv.hex(), ciphertext.hex(), tag
+
+def verify_and_decrypt(key_aes: bytes, key_hmac: bytes, iv_hex: str, ciphertext_hex: str, tag_hex: str):
+    iv = bytes.fromhex(iv_hex)
+    ciphertext = bytes.fromhex(ciphertext_hex)
+    expected = hmac.new(key_hmac, iv + ciphertext, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, tag_hex):
+        raise ValueError("HMAC inválido")
+    plain = unpad(AES.new(key_aes, AES.MODE_CBC, iv).decrypt(ciphertext), AES.block_size)
+    return plain.decode()

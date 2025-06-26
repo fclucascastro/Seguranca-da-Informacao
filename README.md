@@ -8,7 +8,7 @@ Este repositório contém o desenvolvimento passo a passo de uma aplicação de 
 - Garantia de integridade e autenticidade com **HMAC**
 - Comunicação via **sockets**
 
-> Desenvolvido por Lucas para a disciplina de Segurança da Informação (Redes de Computadores), com foco no aprendizado gradual e explicações detalhadas.
+> Desenvolvido por Lucas Castro Discente de Redes de Computadores na UFC Quixadá-Ce para a disciplina de Segurança da Informação, com foco no aprendizado gradual e explicações detalhadas.
 
 ---
 
@@ -63,5 +63,5 @@ Este projeto foi construído com foco didático, para consolidar os conhecimento
 
 ## 👨‍💻 Autor
 
-Lucas – Curso Redes de Computadores  
+Lucas Castro – Curso Redes de Computadores  
 [GitHub: fclucascastro](https://github.com/fclucascastro)
