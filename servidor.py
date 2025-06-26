@@ -4,6 +4,7 @@ import random
 import hashlib
 import json
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
+from crypto_utils import derive_keys
 
 # 1) Parâmetros públicos DH
 p = 23
@@ -45,21 +46,29 @@ if not vk_cliente.verify(sig_A, texto, hashfunc=hashlib.sha256):
     exit(1)
 print("[Servidor] Assinatura de A verificada com sucesso.")
 
-# 7) Assina B e envia de volta
+# 7) Calcula e mostra chave secreta
+S = pow(A, b, p)
+print(f"[Servidor] Chave secreta S: {S}")
+
+# 8) Derivação de chaves (PBKDF2)
+salt, key_aes, key_hmac = derive_keys(S)
+print(f"Salt gerado    (hex): {salt.hex()}")
+print(f"Key_AES  (hex): {key_aes.hex()}")
+print(f"Key_HMAC (hex): {key_hmac.hex()}")
+
+# 9) Assina B e envia de volta (inclui salt)
 user_servidor = "ServidorSeguranca2025"
 texto2 = f"{B} {user_servidor}".encode()
 sig_B = sk.sign_deterministic(texto2, hashfunc=hashlib.sha256)
 response = {
     "B": B,
     "signature": sig_B.hex(),
-    "username": user_servidor
+    "username": user_servidor,
+    "salt": salt.hex()
 }
 conn.send(json.dumps(response).encode())
-print("[Servidor] Enviou B assinado ao cliente.")
+print("[Servidor] Enviou B assinado e salt ao cliente.")
 
-# 8) Calcula e mostra chave secreta
-S = pow(A, b, p)
-print(f"[Servidor] Chave secreta S: {S}")
-
+# 10) Fecha conexão
 conn.close()
 server.close()

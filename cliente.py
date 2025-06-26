@@ -4,6 +4,7 @@ import random
 import hashlib
 import json
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
+from crypto_utils import derive_keys
 
 # 1) Parâmetros públicos DH
 p = 23
@@ -35,13 +36,16 @@ client.connect(('localhost', 5000))
 client.send(json.dumps(payload).encode())
 print("[Cliente] Enviou A assinado ao servidor.")
 
-# 5) Recebe B assinado do servidor
+# 5) Recebe B assinado do servidor (mais salt)
 data = client.recv(4096)
 resp = json.loads(data.decode())
 B = resp["B"]
 sig_B = bytes.fromhex(resp["signature"])
 user_servidor = resp["username"]
+# Extrai salt enviado pelo servidor
+salt = bytes.fromhex(resp["salt"])
 print(f"[Cliente] Recebido B={B} de {user_servidor}")
+print(f"[Cliente] Salt recebido (hex): {salt.hex()}")
 
 # 6) Verifica assinatura de B
 texto2 = f"{B} {user_servidor}".encode()
@@ -55,4 +59,11 @@ print("[Cliente] Assinatura de B verificada com sucesso.")
 S = pow(B, a, p)
 print(f"[Cliente] Chave secreta S: {S}")
 
+# 8) Derivação de chaves com salt recebido
+salt, key_aes, key_hmac = derive_keys(S, salt=salt)
+print(f"Salt usado      (hex): {salt.hex()}")
+print(f"Key_AES cliente : {key_aes.hex()}")
+print(f"Key_HMAC cliente: {key_hmac.hex()}")
+
+# 9) Fecha conexão
 client.close()
