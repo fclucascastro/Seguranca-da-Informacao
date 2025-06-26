@@ -1,0 +1,6 @@
+# Virtualenv
+venv/
+
+# Chaves privadas
+server_private.pem
+client_private.pem
