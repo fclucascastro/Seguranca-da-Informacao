@@ -1,35 +1,65 @@
-# servidor.py - Handshake Diffie-Hellman, a ideia aqui seria o servidor realizar o handshake DH com um cliente.
-
+# servidor.py
 import socket
 import random
+import hashlib
+import json
+from ecdsa import SigningKey, VerifyingKey, SECP256k1
 
-p = 23  # número primo (público)
-g = 5   # gerador (público)
+# 1) Parâmetros públicos DH
+p = 23
+g = 5
 
-# Gerar chave privada do servidor (b)
+# 2) Carrega chaves ECDSA
+# Privada do servidor (para assinar)
+sk = SigningKey.from_pem(open("server_private.pem", "rb").read())
+# Pública do cliente (para verificar)
+vk_cliente = VerifyingKey.from_pem(open("client.keys", "rb").read())
+
+# 3) Gera DH do servidor
 b = random.randint(1, 100)
-B = pow(g, b, p)  # chave pública B = g^b mod p
+B = pow(g, b, p)
+print(f"[Servidor] Chave pública B: {B}")
 
-print(f"[Servidor] Chave privada: {b}")
-print(f"[Servidor] Chave pública: {B}")
-
-# Cria socket e aguarda conexão
+# 4) Inicia o socket
 server = socket.socket()
 server.bind(('localhost', 5000))
 server.listen(1)
-print("[Servidor] Aguardando conexão...")
-
+print("[Servidor] Aguardando cliente...")
 conn, addr = server.accept()
-print(f"[Servidor] Cliente conectado: {addr}")
+print(f"[Servidor] Conectado por {addr}")
 
-# Envia B para o cliente e recebe A
-conn.send(str(B).encode())
-A = int(conn.recv(1024).decode())
-print(f"[Servidor] Chave pública recebida (A): {A}")
+# 5) Recebe A assinado
+data = conn.recv(4096)
+msg = json.loads(data.decode())
+A = msg["A"]
+sig_A = bytes.fromhex(msg["signature"])
+user_cliente = msg["username"]
+print(f"[Servidor] Recebido A={A} de {user_cliente}")
 
-# Calcula chave secreta compartilhada: S = A^b mod p
+# 6) Verifica assinatura de A
+texto = f"{A} {user_cliente}".encode()
+if not vk_cliente.verify(sig_A, texto, hashfunc=hashlib.sha256):
+    print("[Servidor] Assinatura de A inválida! Encerrando.")
+    conn.close()
+    server.close()
+    exit(1)
+print("[Servidor] Assinatura de A verificada com sucesso.")
+
+# 7) Assina B e envia de volta
+user_servidor = "ServidorSeguranca2025"
+texto2 = f"{B} {user_servidor}".encode()
+sig_B = sk.sign_deterministic(texto2, hashfunc=hashlib.sha256)
+response = {
+    "B": B,
+    "signature": sig_B.hex(),
+    "username": user_servidor
+}
+conn.send(json.dumps(response).encode())
+print("[Servidor] Enviou B assinado ao cliente.")
+
+# 8) Calcula e mostra chave secreta
 S = pow(A, b, p)
-print(f"[Servidor] Chave secreta compartilhada: {S}")
+print(f"[Servidor] Chave secreta S: {S}")
 
 conn.close()
 server.close()
